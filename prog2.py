@@ -1,63 +1,39 @@
-N =8
-board = [[0 for i in range(N)] for i in range(N)]
+import pandas as pd
+import matplotlib.pyplot as plt
+import seaborn as sns
 
-def check_column(board, row, column):
-    for i in range(row):
-        #column is fixed 
-        if board[i][column] == 1:
-            return False
-    return True
+# Step 1: Load the dataset
+df = pd.read_csv("Iris.csv")
 
-#check for top left and top right 
-def check_diagonal(board, row, column):
-    #top left
-    for i,j in zip(range(row, -1, -1), range(column, -1,-1)):
-        if board[i][j] == 1:
-            return False
-    
-    #top right
-    for i,j in zip(range(row, -1, -1), range(column, N)):
-        if board[i][j] == 1:
-            return False
-    return True
+# Step 2: Drop non-numeric/unnecessary columns (like ID if exists)
+df = df.drop(columns=["Id"]) if "Id" in df.columns else df
 
-def NQueen(board, row):
-    if row == N:
-        return True
-    for i in range(N):
-        if(check_column(board, row, i)==True and check_diagonal(board, row, i)==True):
-            board[row][i] = 1
-            if(NQueen(board, row+1)):
-                return True
-            board[row][i] = 0
-    return False
-NQueen(board, 0)
-for row in board:
-    print(row)
-    
-    
-def dfs(graph, start, visited=None):
-    if visited is None:
-        visited = set()
+# Step 3: Filter by species
+species = df['Species'].unique()
+for s in species:
+    print(f"\n--- Statistics for {s} ---")
+    subset = df[df['Species'] == s]
+    print(subset.describe(percentiles=[.25, .5, .75]))
 
-    print(start, end=" ")
-    visited.add(start)
+# Step 4: Measures of variability function
+def variability_measures(data):
+    stats = {
+        'Range': data.max() - data.min(),
+        'IQR': data.quantile(0.75) - data.quantile(0.25),
+        'Variance': data.var(),
+        'Standard Deviation': data.std()
+    }
+    return pd.DataFrame(stats)
 
-    for neighbor in graph.get(start, []):
-        if neighbor not in visited:
-            dfs(graph, neighbor, visited)
+print("\n--- Measures of Variability for Each Numeric Column ---")
+numeric_cols = df.select_dtypes(include='float64')
+print(variability_measures(numeric_cols))
 
-# --- Taking input from the user ---
-graph = {}
+# Step 5: Correlation matrix
+corr = numeric_cols.corr()
 
-num_nodes = int(input("Enter number of nodes: "))
-
-for _ in range(num_nodes):
-    node = input("Enter node name: ")
-    neighbors = input(f"Enter neighbours of {node} separated by space: ").split()
-    graph[node] = neighbors
-
-start_node = input("Enter the starting node for DFS traversal: ")
-
-print("\nDFS Traversal is:")
-dfs(graph, start_node)
+# Step 6: Visualization of correlation matrix
+plt.figure(figsize=(8, 6))
+sns.heatmap(corr, annot=True, cmap='coolwarm', fmt='.2f')
+plt.title("Correlation Heatmap of Iris Dataset Features")
+plt.show()
